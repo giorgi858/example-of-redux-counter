@@ -1,39 +1,40 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { selectAllPosts } from './postSlice'
-import { useSelector } from 'react-redux'
+import { selectAllPosts, getPostsError, getPostsStatus, fetchPosts } from './postSlice'
+import { useSelector, useDispatch } from 'react-redux'
 import AddPostForm from './AddPostForm'
-import PostAuthor from './PostAuthor'
-import TimeAgo from './TimeAgo'
-import ReactionButtons from './ReactionButtons'
+import PostsExcerpt from './PostsExcerpt'
+import { useEffect } from 'react'
 
 const PostList = () => {
+  const dispatch = useDispatch()
   const posts = useSelector(selectAllPosts)
-  const orderedPosts = posts.slice().sort((a, b) => b.date.localeCompare(a.date))
+  const postStatus = useSelector(getPostsStatus)
+  const error = useSelector(getPostsError)
 
-  const navigage = useNavigate()
+  useEffect(() => {
+    if (postStatus === 'idle') {
+        dispatch(fetchPosts())
+    }
+}, [postStatus, dispatch])
 
-  const goAnother = () => {
-    navigage('/')
-  }
-   const renderdPosts = orderedPosts.map((post) => (
-    <article key={post.id}>
-        <h2>{post.title}</h2>
-        <h4>{post.content}</h4>
-        <p className='postCredit'>
-          <PostAuthor userId={post.userId}/> 
-          <TimeAgo timeStamp={post.date}/> 
-        </p>
-        <ReactionButtons post={post}/>
-    </article>
-   ))
-
-  return (
-    <div>
-      <AddPostForm/>
-    {renderdPosts}
-    <button onClick={goAnother}  className='btn btn-outline-success'>Go Home</button>
-    </div>
-  )
+let content;
+if (postStatus === 'loading') {
+    content = <p>"Loading..."</p>;
+} else if (postStatus === 'succeeded') {
+    const orderedPosts = posts.slice().sort((a, b) => b.date.localeCompare(a.date))
+    content = orderedPosts.map(post => <PostsExcerpt key={post.id} post={post} />)
+} else if (postStatus === 'failed') {
+    content = <p>{error}</p>;
 }
+
+return (
+    <section>
+      <AddPostForm />
+        <h2>Posts</h2>
+        {content}
+    </section>
+)
+}
+
 export default PostList
